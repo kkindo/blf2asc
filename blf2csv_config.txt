@@ -1,0 +1,2 @@
+log_folderpath, C:\my_tools\can_tools\blf2asc\src\Input
+filter_config_filepath, C:\my_tools\can_tools\blf2asc\src\can_frame_filter_config.txt
