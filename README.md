@@ -1,3 +1,3 @@
 # blf2asc
-Desription : Convert .blf to .asc file
-Usage : Drag & drop a blf file
+Convert .blf to .asc file
+Usage : Drag & drop a blf file to blf2asc.exe
