@@ -5,7 +5,7 @@ use python >= 3.9
 
 go to folder
 
-    cd script
+    cd .
 
 create venv
 
@@ -21,6 +21,6 @@ install package
 
 run script
 
-    python .\src\blf2asc.py
+    python .\blf2asc\blf2asc.py
 
 

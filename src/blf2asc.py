@@ -1,43 +1,20 @@
 import os
 import datetime
 import argparse
+import pathlib
 import glob
 from to_asc import to_asc
+import sys
 
 # Get the argment
 def get_arg():
-    usage = 'blf2asc.exe [--filter] [--help]'
-    description = 'Convert blf file to asc file (very similar format to Vector asc file)'
+    usage = 'blf2asc.exe path [--filter] [--help]'
+    description = "Convert blf file to asc file."
     parser = argparse.ArgumentParser(usage=usage, description=description)
-    parser.add_argument( '--filter', action='store_true', help="")
+    parser.add_argument('path', type=pathlib.Path, help="Input filepath or folderpath")
+    parser.add_argument('--filter', action='store_true', required=False, help="Input filter configuration file path")
     args = parser.parse_args()
     return args
-
-# Get Configuration setting
-def get_config():
-    config_filename = 'blf2csv_config.txt'
-    KEY1 = 'log_folderpath'
-    KEY2 = 'filter_config_filepath'
-    config_datas = {KEY1:'', KEY2:''}    
-    print("Read config file ( %s )" % config_filename)
-    if os.path.exists(config_filename):
-        fp_config_file = open(config_filename, "r", encoding="utf-8")
-        lines = fp_config_file.readlines()
-        fp_config_file.close()
-        for line in lines:
-            if (line.find(',') > 0):
-                parameter = line.split(',')
-                #print("parameter =",parameter)
-                parameter_key = parameter[0].strip()
-                config_datas[parameter_key] = parameter[1].strip()
-                print("%-29s = %s" %(parameter_key, config_datas[parameter_key]))
-        canlog_path     = config_datas[KEY1]
-        frame_cfg_path  = config_datas[KEY2]
-        if canlog_path == '':
-            raise Exception("ERROR : " + KEY1 + " is not input in " + config_filename)
-    else:
-        raise Exception("ERROR : " + config_filename + " is not found in the current directory.")
-    return canlog_path, frame_cfg_path
 
 # Get frame filter configuration
 def get_filtered_canids(frame_cfg_path):
@@ -84,33 +61,51 @@ def get_filtered_canids(frame_cfg_path):
     
 def main():
     #sys.tracebacklimit = 0
+    exe_filepath = os.path.abspath(sys.argv[0])
+    exe_dir = os.path.dirname(exe_filepath)
     # Get the argment
     args = get_arg()
-    # Get Configuration setting
-    canlog_folderpath, frame_cfg_path = get_config()
-    if not os.path.isdir(canlog_folderpath):
-        raise Exception(f"ERROR : folderpath ( {canlog_folderpath} ) was not found.")    
+    # Get input path
+    input_path = args.path
+    input_path = str(input_path)
+    blf_filepaths = []
+    asc_filepaths = []
+    canlog_filepaths = []
+    output_dir = ""
+    if os.path.isdir(input_path):
+        blf_filepaths = glob.glob(input_path + '/**/*.blf', recursive=True) # retrieve input file names, recursively
+        asc_filepaths = glob.glob(input_path + '/**/*.asc', recursive=True) # retrieve input file names, recursively
+        canlog_filepaths = blf_filepaths + asc_filepaths
+        if canlog_filepaths == []:
+            raise Exception("ERROR! Input log file(s) was not found.")
+        output_dir = input_path
+    elif os.path.isfile(input_path):
+        if input_path[-4:] == '.blf':
+            blf_filepaths = [input_path]
+        elif input_path[-4:] == '.asc':
+            asc_filepaths = [input_path]
+        else:
+            raise Exception("ERROR! Input file extension is not supported.")
+        canlog_filepaths = blf_filepaths + asc_filepaths
+        output_dir = os.path.dirname(input_path)
+    else:
+        raise Exception(f"ERROR : input path ( {input_path} ) was not found.")
+    #output_dir = os.getcwd()
+    #output_dir = output_dir + "\\" + 'output_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    #os.makedirs(output_dir)
+    print(f"Outputting to directory : {output_dir}")
     # Get filter configuration
     if args.filter == True:
-        filtered_canids = get_filtered_canids(frame_cfg_path)
+        filter_config_filepath = os.path.join(exe_dir, 'blf2asc_filter_config.txt')
+        filtered_canids = get_filtered_canids(filter_config_filepath)
     else:
         filtered_canids = []
-    # retrieve input file names, recursively
-    blf_filepaths = glob.glob(canlog_folderpath + '/**/*.blf', recursive=True)
-    asc_filepaths = glob.glob(canlog_folderpath + '/**/*.asc', recursive=True)
-    canlog_file_paths = blf_filepaths + asc_filepaths
-    if canlog_file_paths == []:
-        raise Exception("ERROR! Input log file(s) was not found.")
-    output_dir = os.getcwd()
-    output_dir = output_dir + "\\" + 'output_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    os.makedirs(output_dir)
-    print(f"Outputting to directory : {output_dir}")
-    for canlog_file_path in canlog_file_paths:
+    for canlog_filepath in canlog_filepaths:
         print("")
         print("Start converting...")
-        print(f"Input filepath  : {canlog_file_path}")
+        print(f"Input filepath  : {canlog_filepath}")
         start_time_one_file = datetime.datetime.now()
-        to_asc(canlog_file_path, output_dir, filtered_canids)
+        to_asc(canlog_filepath, output_dir, filtered_canids)
         end_time_one_file = datetime.datetime.now()
         diff_time = str(end_time_one_file - start_time_one_file)
         hours, str_minutes, str_float_seconds = diff_time.split(':')
